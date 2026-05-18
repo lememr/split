@@ -53,8 +53,16 @@ export async function GET(request: NextRequest) {
       return json({ success: false, error: 'No active pages' }, 404);
     }
 
-    let config = (await kv.get<Config>(CONFIG_KEY)) ?? { mode: 'round-robin', roundRobinIndex: 0 };
-    if (!config.mode) config = { mode: 'round-robin', roundRobinIndex: 0 };
+    let rawConfig = (await kv.get<Config>(CONFIG_KEY)) ?? {};
+    // Suporta tanto mode: 'weighted' quanto legado modo: 'peso'
+    let mode: string = rawConfig.mode ?? (rawConfig as any).modo ?? 'round-robin';
+    if (mode === 'peso') mode = 'weighted';
+    if (!['weighted', 'round-robin'].includes(mode)) mode = 'round-robin';
+
+    let config: Config = {
+      mode: mode as 'weighted' | 'round-robin',
+      roundRobinIndex: rawConfig.roundRobinIndex ?? 0,
+    };
 
     let selectedPage: Page | null = null;
 
