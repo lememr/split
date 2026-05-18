@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       return json({ success: false, error: 'No active pages' }, 404);
     }
 
-    let rawConfig = (await kv.get<Config>(CONFIG_KEY)) ?? {};
+    let rawConfig: any = (await kv.get(CONFIG_KEY)) ?? {};
     // Suporta tanto mode: 'weighted' quanto legado modo: 'peso'
     let mode: string = rawConfig.mode ?? (rawConfig as any).modo ?? 'round-robin';
     if (mode === 'peso') mode = 'weighted';
