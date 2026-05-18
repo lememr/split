@@ -57,8 +57,9 @@ export default function Dashboard() {
   const loadPages = useCallback(async () => {
     try {
       const res = await fetch("/api/pages");
-      const data = await res.json();
-      setPages(data.pages || []);
+      const json = await res.json();
+      const data = json.data || json.pages || [];
+      setPages(data);
     } catch {
       setPages([]);
     } finally {

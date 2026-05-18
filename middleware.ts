@@ -1,22 +1,29 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/redirect', '/api/track'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/redirect',
+  '/api/track',
+  '/api/stats',
+  '/favicon.ico',
+  '/_next',
+  '/pixel.js',
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
+  // Rotas publicas
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next();
   }
 
-  // Check auth cookie
-  const authCookie = request.cookies.get('split-auth')?.value;
-  const adminPassword = process.env.ADMIN_PASSWORD || 'split2024';
-  const expectedHash = Buffer.from(adminPassword).toString('base64');
-
-  if (authCookie !== expectedHash) {
+  // Bloqueia se nao tiver cookie 'split-auth'
+  const auth = request.cookies.get('split-auth')?.value;
+  if (!auth) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -24,5 +31,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|pixel.js).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
