@@ -41,7 +41,7 @@ const ordenacoes = [
   { chave: "status", label: "Status" },
 ] as const;
 
-tipo ChaveOrdenacao = (typeof ordenacoes)[number]["chave"];
+type ChaveOrdenacao = (typeof ordenacoes)[number]["chave"];
 
 export default function Dashboard() {
   const [paginas, setPaginas] = useState<Pagina[]>([]);
