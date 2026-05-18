@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
 import { LayoutDashboard, FileText, Settings, LogOut } from "lucide-react";
-import "./globals.css";
-import LogoutButton from "./components/LogoutButton";
+import LogoutButton from "@/app/components/LogoutButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
