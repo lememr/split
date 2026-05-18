@@ -79,11 +79,12 @@ export async function GET(request: NextRequest) {
 
     await kv.set(CONFIG_KEY, config);
 
-    return json({
-      success: true,
-      data: {
-        redirectUrl: selectedPage.url,
-        selectedPage,
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': selectedPage.url,
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (err) {
