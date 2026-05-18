@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
-import { LayoutDashboard, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, FileText, Settings, LogOut } from "lucide-react";
 import "./globals.css";
+import LogoutButton from "./components/LogoutButton";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -49,6 +50,9 @@ export default function RootLayout({
                 <span className="font-medium">Configuracoes</span>
               </Link>
             </nav>
+            <div className="hidden md:block mt-auto p-4 border-t border-[#E2E8F0]">
+              <LogoutButton />
+            </div>
           </aside>
 
           <main className="flex-1 md:ml-64 min-w-0">

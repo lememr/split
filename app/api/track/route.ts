@@ -1,53 +1,78 @@
 import { NextRequest } from 'next/server';
 import * as kv from '@/lib/kv';
-import { Page, TrackEvent } from '@/lib/types';
+import { Page } from '@/lib/types';
 
 const PAGES_KEY = 'split:pages';
-const EVENTS_KEY = 'split:events';
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
-}
-
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const body = (await request.json()) as Partial<TrackEvent>;
-    if (!body?.pageId || !body?.type || !['visit', 'conversion'].includes(body.type)) {
-      return json({ success: false, error: 'Missing/invalid fields: pageId, type' }, 400);
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type');
+    const pageId = searchParams.get('pageId');
+    const token = searchParams.get('token'); // secret token for security
+
+    const TRACKING_SECRET = process.env.TRACKING_SECRET || 'split-track-2024';
+
+    if (!type || !pageId) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing type or pageId' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+
+    // Optional: validate secret token for conversions
+    if (type === 'conversion' && token !== TRACKING_SECRET) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid tracking token' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
     const pages = (await kv.get<Page[]>(PAGES_KEY)) ?? [];
-    const idx = pages.findIndex((p) => p.id === body.pageId);
+    const idx = pages.findIndex((p) => p.id === pageId);
+
     if (idx === -1) {
-      return json({ success: false, error: 'Page not found' }, 404);
+      return new Response(JSON.stringify({ success: false, error: 'Page not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
     }
 
-    if (body.type === 'visit') pages[idx].visits += 1;
-    if (body.type === 'conversion') pages[idx].conversions += 1;
+    if (type === 'visit') {
+      pages[idx].visits += 1;
+    } else if (type === 'conversion') {
+      pages[idx].conversions += 1;
+    }
 
     await kv.set(PAGES_KEY, pages);
 
-    const event: TrackEvent = {
-      pageId: body.pageId,
-      type: body.type,
-      timestamp: body.timestamp ?? new Date().toISOString(),
-    };
-    await kv.lpush(EVENTS_KEY, event);
-
-    return json({ success: true, data: event });
+    // Return 1x1 transparent pixel for img tag tracking
+    return new Response(
+      Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64'),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/gif',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   } catch (err) {
-    return json({ success: false, error: String(err) }, 500);
+    return new Response(JSON.stringify({ success: false, error: String(err) }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   }
 }
 
 export async function OPTIONS() {
-  return json(null, 204);
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
 }
