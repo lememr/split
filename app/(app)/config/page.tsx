@@ -23,11 +23,11 @@ export default function ConfigPage() {
     async function buscar() {
       try {
         const res = await fetch("/api/config");
-        const dados = await res.json();
+        const { data } = await res.json();
         setConfig({
-          baseUrl: dados.baseUrl || "",
-          modo: dados.modo || "peso",
-          trackingParams: dados.trackingParams || "",
+          baseUrl: data?.baseUrl || "",
+          modo: data?.modo || "peso",
+          trackingParams: data?.trackingParams || "",
         });
       } catch {
         // mantem defaults
