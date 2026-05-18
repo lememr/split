@@ -1,85 +1,77 @@
-const inMemoryStore = new Map<string, unknown>();
-const inMemoryLists = new Map<string, unknown[]>();
+import { put, list } from '@vercel/blob';
 
-let kvInstance: Record<string, (...args: any[]) => Promise<unknown>> | null = null;
+const STATE_KEY = 'split-state.json';
 
-async function initKv() {
-  if (kvInstance) return kvInstance;
-  try {
-    const mod = await import('@vercel/kv');
-    kvInstance = (mod as any).kv || (mod as any).default || null;
-  } catch {
-    kvInstance = null;
-  }
-  return kvInstance;
+interface SplitState {
+  [key: string]: any;
 }
 
-export async function get<T>(key: string): Promise<T | null> {
+// Cache simples pra evitar ler muitas vezes no mesmo request
+let memoryCache: SplitState | null = null;
+
+async function fetchState(): Promise<SplitState> {
+  if (memoryCache) return memoryCache;
   try {
-    const kv = await initKv();
-    if (kv) return (await kv.get(key)) as T | null;
-  } catch { /* fallthrough */ }
-  return (inMemoryStore.get(key) as T | undefined) ?? null;
+    const { blobs } = await list({ prefix: STATE_KEY, limit: 1 });
+    if (!blobs || blobs.length === 0) {
+      memoryCache = {};
+      return memoryCache;
+    }
+    const res = await fetch(blobs[0].url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch state');
+    const state = await res.json() as SplitState;
+    memoryCache = state;
+    return state;
+  } catch {
+    memoryCache = {};
+    return memoryCache;
+  }
+}
+
+async function saveState(state: SplitState): Promise<void> {
+  memoryCache = state;
+  const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
+  await put(STATE_KEY, blob, {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+  });
+}
+
+// Misma interfaz que el antiguo kv.ts
+export async function get<T>(key: string): Promise<T | null> {
+  const state = await fetchState();
+  const value = state[key];
+  return value !== undefined ? (value as T) : null;
 }
 
 export async function set<T>(key: string, value: T): Promise<void> {
-  try {
-    const kv = await initKv();
-    if (kv) {
-      await kv.set(key, value);
-      return;
-    }
-  } catch { /* fallthrough */ }
-  inMemoryStore.set(key, value);
+  const state = await fetchState();
+  state[key] = value;
+  await saveState(state);
 }
 
 export async function del(key: string): Promise<void> {
-  try {
-    const kv = await initKv();
-    if (kv) {
-      await kv.del(key);
-      return;
-    }
-  } catch { /* fallthrough */ }
-  inMemoryStore.delete(key);
+  const state = await fetchState();
+  delete state[key];
+  await saveState(state);
 }
 
 export async function lrange<T>(key: string, start: number, stop: number): Promise<T[]> {
-  try {
-    const kv = await initKv();
-    if (kv) {
-      const res = await kv.lrange(key, start, stop);
-      return (res as T[]) ?? [];
-    }
-  } catch { /* fallthrough */ }
-  const list = (inMemoryLists.get(key) ?? []) as T[];
+  const list = (await get<T[]>(key)) ?? [];
   if (stop === -1) return list.slice(start);
   return list.slice(start, stop + 1);
 }
 
 export async function lpush<T>(key: string, ...values: T[]): Promise<void> {
-  try {
-    const kv = await initKv();
-    if (kv) {
-      await kv.lpush(key, ...values);
-      return;
-    }
-  } catch { /* fallthrough */ }
-  const list = (inMemoryLists.get(key) ?? []) as T[];
+  const list = (await get<T[]>(key)) ?? [];
   list.unshift(...values);
-  inMemoryLists.set(key, list);
+  await set(key, list);
 }
 
 export async function lrem<T>(key: string, count: number, value: T): Promise<void> {
-  try {
-    const kv = await initKv();
-    if (kv) {
-      await kv.lrem(key, count, value);
-      return;
-    }
-  } catch { /* fallthrough */ }
-  const list = (inMemoryLists.get(key) ?? []) as T[];
-  const idx = list.indexOf(value);
+  const list = (await get<T[]>(key)) ?? [];
+  const idx = list.indexOf(value as any);
   if (idx !== -1) list.splice(idx, 1);
-  inMemoryLists.set(key, list);
+  await set(key, list);
 }
