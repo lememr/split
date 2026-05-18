@@ -33,12 +33,12 @@ interface FormData {
 }
 
 const sortColumns = [
-  { chave: "name", label: "Name" },
-  { chave: "visits", label: "Visits" },
-  { chave: "conversions", label: "Conversions" },
-  { chave: "rate", label: "Rate %" },
-  { chave: "weight", label: "Weight" },
-  { chave: "status", label: "Status" },
+  { key: "name", label: "Name" },
+  { key: "visits", label: "Visits" },
+  { key: "conversions", label: "Conversions" },
+  { key: "rate", label: "Rate %" },
+  { key: "weight", label: "Weight" },
+  { key: "status", label: "Status" },
 ] as const;
 
 type SortKey = (typeof sortColumns)[number]["key"];
