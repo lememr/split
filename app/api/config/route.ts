@@ -3,37 +3,43 @@ import * as kv from '@/lib/kv';
 
 const CONFIG_KEY = 'split:config';
 
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+  });
+}
+
+/** Normaliza valores PT->EN do frontend */
+function normalizeConfig(raw: any) {
+  const conf = { ...(raw ?? {}) };
+  const rawMode = String(conf.mode ?? conf.modo ?? 'round-robin').toLowerCase();
+  if (rawMode === 'peso') conf.mode = 'weighted';
+  else if (rawMode === 'weighted') conf.mode = 'weighted';
+  else conf.mode = 'round-robin';
+  delete conf.modo; // remove legado
+  return conf;
+}
+
 export async function GET() {
   try {
     const config = await kv.get(CONFIG_KEY);
-    return new Response(JSON.stringify({ success: true, data: config ?? {} }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return json({ success: true, data: normalizeConfig(config) });
   } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: String(err) }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return json({ success: false, error: String(err) }, 500);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    // merge with existing
     const existing = (await kv.get(CONFIG_KEY)) ?? {};
     const merged = { ...existing, ...body };
-    await kv.set(CONFIG_KEY, merged);
-    return new Response(JSON.stringify({ success: true, data: merged }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    const normalized = normalizeConfig(merged);
+    await kv.set(CONFIG_KEY, normalized);
+    return json({ success: true, data: normalized });
   } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: String(err) }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    });
+    return json({ success: false, error: String(err) }, 500);
   }
 }
 

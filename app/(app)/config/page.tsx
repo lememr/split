@@ -5,14 +5,14 @@ import { Save, Globe, SlidersHorizontal, Link2 } from "lucide-react";
 
 interface Config {
   baseUrl: string;
-  modo: "round-robin" | "peso";
+  mode: "weighted" | "round-robin";
   trackingParams: string;
 }
 
 export default function ConfigPage() {
   const [config, setConfig] = useState<Config>({
     baseUrl: "",
-    modo: "peso",
+    mode: "weighted",
     trackingParams: "",
   });
   const [salvando, setSalvando] = useState(false);
@@ -26,7 +26,7 @@ export default function ConfigPage() {
         const { data } = await res.json();
         setConfig({
           baseUrl: data?.baseUrl || "",
-          modo: data?.modo || "peso",
+          mode: data?.mode === "round-robin" ? "round-robin" : "weighted",
           trackingParams: data?.trackingParams || "",
         });
       } catch {
@@ -72,7 +72,6 @@ export default function ConfigPage() {
 
       <form onSubmit={salvar} className="bg-white rounded-xl shadow-sm border border-[#E2E8F0] overflow-hidden">
         <div className="p-4 md:p-6 space-y-5 md:space-y-6">
-          {/* URL Base */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-[#1E293B] mb-2">
               <Globe size={16} className="text-[#0053FD]" />
@@ -90,7 +89,6 @@ export default function ConfigPage() {
             />
           </div>
 
-          {/* Modo de Distribuicao */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-[#1E293B] mb-2">
               <SlidersHorizontal size={16} className="text-[#0053FD]" />
@@ -102,9 +100,9 @@ export default function ConfigPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setConfig((c) => ({ ...c, modo: "peso" }))}
+                onClick={() => setConfig((c) => ({ ...c, mode: "weighted" }))}
                 className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${
-                  config.modo === "peso"
+                  config.mode === "weighted"
                     ? "border-[#0053FD] bg-[#0053FD]/5 text-[#0053FD]"
                     : "border-[#E2E8F0] text-[#64748B] hover:border-[#CBD5E1]"
                 }`}
@@ -116,9 +114,9 @@ export default function ConfigPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setConfig((c) => ({ ...c, modo: "round-robin" }))}
+                onClick={() => setConfig((c) => ({ ...c, mode: "round-robin" }))}
                 className={`px-4 py-3 rounded-lg border text-sm font-medium transition-all ${
-                  config.modo === "round-robin"
+                  config.mode === "round-robin"
                     ? "border-[#0053FD] bg-[#0053FD]/5 text-[#0053FD]"
                     : "border-[#E2E8F0] text-[#64748B] hover:border-[#CBD5E1]"
                 }`}
@@ -131,7 +129,6 @@ export default function ConfigPage() {
             </div>
           </div>
 
-          {/* Tracking Parameters */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-[#1E293B] mb-2">
               <Link2 size={16} className="text-[#0053FD]" />
